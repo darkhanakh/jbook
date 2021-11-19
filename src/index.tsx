@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import * as esbuild from 'esbuild-wasm';
+import { unpkgPathPlugin } from './plugins/unpkg-path-plugin';
 
 const App = () => {
   const [input, setInput] = useState('');
@@ -15,17 +16,19 @@ const App = () => {
     });
   };
 
-  const onClickHandler = () => {
+  const onClickHandler = async () => {
     if (!serviceRef.current) {
       return;
     }
 
-    const transformedCode = serviceRef.current.transform(input, {
-      loader: 'tsx',
-      target: 'es2015',
+    const result = await serviceRef.current.build({
+      entryPoints: ['index.js'],
+      bundle: true,
+      write: false,
+      plugins: [unpkgPathPlugin()],
     });
 
-    transformedCode.then(c => setCode(c.code));
+    setCode(result.outputFiles[0].text);
   };
 
   useEffect(() => {
