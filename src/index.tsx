@@ -8,6 +8,7 @@ const App = () => {
   const [code, setCode] = useState('')
 
   const serviceRef = useRef<esbuild.Service>()
+  const iframeRef = useRef<any>()
 
   const startService = async () => {
     serviceRef.current = await esbuild.startService({
@@ -32,12 +33,32 @@ const App = () => {
       },
     })
 
-    setCode(result.outputFiles[0].text)
+    // setCode(result.outputFiles[0].text)
+    iframeRef.current.contentWindow.postMessage(result.outputFiles[0].text, '*')
   }
 
   useEffect(() => {
     startService()
   }, [])
+
+  const iframeHtml = `
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Document</title>
+    </head>
+    <body>
+      <div id="root"></div>
+      <script>
+        window.addEventListener('message', e => {
+          eval(e.data)
+        }, false);
+      </script>
+    </body>
+  </html>
+  `
 
   return (
     <div>
@@ -49,6 +70,7 @@ const App = () => {
         <button onClick={onClickHandler}>Submit</button>
       </div>
       <pre>{code}</pre>
+      <iframe sandbox="allow-scripts" srcDoc={iframeHtml} ref={iframeRef} />
     </div>
   )
 }
