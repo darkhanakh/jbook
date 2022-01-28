@@ -5,7 +5,6 @@ import { unpkgPathPlugin, fetchPlugin } from './plugins'
 
 const App = () => {
   const [input, setInput] = useState('')
-  const [code, setCode] = useState('')
 
   const serviceRef = useRef<esbuild.Service>()
   const iframeRef = useRef<any>()
@@ -21,6 +20,8 @@ const App = () => {
     if (!serviceRef.current) {
       return
     }
+
+    iframeRef.current.srcdoc = iframeHtml
 
     const result = await serviceRef.current.build({
       entryPoints: ['index.js'],
@@ -42,22 +43,28 @@ const App = () => {
   }, [])
 
   const iframeHtml = `
-  <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta http-equiv="X-UA-Compatible" content="IE=edge">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Document</title>
-    </head>
-    <body>
-      <div id="root"></div>
-      <script>
-        window.addEventListener('message', e => {
-          eval(e.data)
-        }, false);
-      </script>
-    </body>
-  </html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Document</title>
+      </head>
+      <body>
+        <div id="root"></div>
+        <script>
+          window.addEventListener('message', e => {
+            try {
+              eval(e.data)
+            } catch(error) {
+              const root = document.querySelector('#root')
+              root.innerHTML = '<div style="color: red;"><h4>Runtime Error</h4>' + error + '</div>'
+              throw error
+            }
+          }, false);
+        </script>
+      </body>
+    </html>
   `
 
   return (
@@ -69,8 +76,12 @@ const App = () => {
       <div>
         <button onClick={onClickHandler}>Submit</button>
       </div>
-      <pre>{code}</pre>
-      <iframe sandbox="allow-scripts" srcDoc={iframeHtml} ref={iframeRef} />
+      <iframe
+        title="code preview"
+        sandbox="allow-scripts"
+        srcDoc={iframeHtml}
+        ref={iframeRef}
+      />
     </div>
   )
 }
