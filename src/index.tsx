@@ -3,13 +3,13 @@ import React, { useState, useEffect, useRef } from 'react'
 import ReactDOM from 'react-dom'
 import * as esbuild from 'esbuild-wasm'
 import { unpkgPathPlugin, fetchPlugin } from './plugins'
-import { CodeEditor } from './components'
+import { CodeEditor, Preview } from './components'
 
 const App = () => {
   const [input, setInput] = useState('')
+  const [code, setCode] = useState('')
 
   const serviceRef = useRef<esbuild.Service>()
-  const iframeRef = useRef<any>()
 
   const startService = async () => {
     serviceRef.current = await esbuild.startService({
@@ -23,8 +23,6 @@ const App = () => {
       return
     }
 
-    iframeRef.current.srcdoc = iframeHtml
-
     const result = await serviceRef.current.build({
       entryPoints: ['index.js'],
       bundle: true,
@@ -36,38 +34,12 @@ const App = () => {
       },
     })
 
-    // setCode(result.outputFiles[0].text)
-    iframeRef.current.contentWindow.postMessage(result.outputFiles[0].text, '*')
+    setCode(result.outputFiles[0].text)
   }
 
   useEffect(() => {
     startService()
   }, [])
-
-  const iframeHtml = `
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Document</title>
-      </head>
-      <body>
-        <div id="root"></div>
-        <script>
-          window.addEventListener('message', e => {
-            try {
-              eval(e.data)
-            } catch(error) {
-              const root = document.querySelector('#root')
-              root.innerHTML = '<div style="color: red;"><h4>Runtime Error</h4>' + error + '</div>'
-              throw error
-            }
-          }, false);
-        </script>
-      </body>
-    </html>
-  `
 
   return (
     <div>
@@ -75,19 +47,10 @@ const App = () => {
         initialValue="const a = 1"
         onChange={value => setInput(value)}
       />
-      <textarea
-        value={input}
-        onChange={e => setInput(e.target.value)}
-      ></textarea>
       <div>
         <button onClick={onClickHandler}>Submit</button>
       </div>
-      <iframe
-        title="code preview"
-        sandbox="allow-scripts"
-        srcDoc={iframeHtml}
-        ref={iframeRef}
-      />
+      <Preview code={code} />
     </div>
   )
 }
